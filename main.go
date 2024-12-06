@@ -1,24 +1,44 @@
 package main
 
+import _ "github.com/lib/pq"
+
 import (
 	"fmt"
 	"github.com/jake-abed/gatorcli/internal/config"
+	"github.com/jake-abed/gatorcli/internal/database"
+	"os"
+	"database/sql"
 )
 
 func main() {
 	cfg, err := config.Read()
 	if err != nil {
-		fmt.Errorf("Error: %v", err)
+		fmt.Println(err)
+	}
+	db, err := sql.Open("postgres", cfg.DbUrl)
+	dbQueries := database.New(db)
+	appState := &state{Config: &cfg, Db: dbQueries}
+	cmds := &commands{AllCommands: map[string]func(*state, command) error{}}
+	cmds.register("login", handlerLogin)
+	cmds.register("register", handlerRegister)
+
+	args := os.Args
+
+	if len(args) < 2 {
+		fmt.Println(fmt.Errorf("Argument required!"))
+		os.Exit(1)
 	}
 
-	err = cfg.SetUser("jake")
+	cmdName := args[1]
+	cmdArgs := args[2:]
+
+	currentCmd := command{Name: cmdName, Arguments: cmdArgs}
+
+	err = cmds.run(appState, currentCmd)
 	if err != nil {
-		fmt.Errorf("Error; %v", err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	cfg, err = config.Read()
-	if err != nil {
-		fmt.Errorf("Error: %v", err)
-	}
-	fmt.Println(cfg)
+	os.Exit(0)
 }
