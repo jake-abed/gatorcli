@@ -71,6 +71,22 @@ func handlerRegister(s *state, cmd command) error {
 	return nil
 }
 
+func handlerReset(s *state, cmd command) error {
+	if len(cmd.Arguments) != 0 {
+		fmt.Println("Reset does not accept arguments!")
+		os.Exit(1)
+	}
+
+	err := s.Db.ResetUsers(context.Background())
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Users successfully reset in Gator DB!")
+	return nil
+}
+
 func (c *commands) run(s *state, cmd command) error {
 	cmdFn, ok := c.AllCommands[cmd.Name]
 	if !ok {
