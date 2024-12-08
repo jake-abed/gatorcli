@@ -114,6 +114,59 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.Arguments) != 2 {
+		fmt.Println("addFeed expects two arguments!")
+		os.Exit(1)
+	}
+
+	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	feedParams := database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      cmd.Arguments[0],
+		Url:       cmd.Arguments[1],
+		UserID:    user.ID,
+	}
+
+	feed, err := s.Db.CreateFeed(context.Background(), feedParams)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Println(feed)
+
+	return nil
+}
+
+func handlerFeeds(s *state, cmd command) error {
+	if len(cmd.Arguments) != 0 {
+		fmt.Println("feeds expects no arguments!")
+		os.Exit(1)
+	}
+
+	feeds, err := s.Db.GetFeeds(context.Background())
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for _, feed := range feeds {
+		fmt.Printf("Feed: %s | URL: %s | User: %s\n",
+			feed.Name, feed.Url, feed.Name_2,
+		)
+	}
+
+	return nil
+}
+
 func handlerReset(s *state, cmd command) error {
 	if len(cmd.Arguments) != 0 {
 		fmt.Println("Reset does not accept arguments!")
