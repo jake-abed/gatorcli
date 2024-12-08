@@ -95,6 +95,25 @@ func handlerUsers(s *state, cmd command) error {
 	return nil
 }
 
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.Arguments) != 0 {
+		fmt.Println("Agg command expects no arguments!")
+		os.Exit(1)
+	}
+
+	url := "https://www.wagslane.dev/index.xml"
+
+	feed, err := fetchFeed(context.Background(), url)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Println(*feed)
+
+	return nil
+}
+
 func handlerReset(s *state, cmd command) error {
 	if len(cmd.Arguments) != 0 {
 		fmt.Println("Reset does not accept arguments!")
