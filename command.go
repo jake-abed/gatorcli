@@ -71,6 +71,30 @@ func handlerRegister(s *state, cmd command) error {
 	return nil
 }
 
+func handlerUsers(s *state, cmd command) error {
+	if len(cmd.Arguments) != 0 {
+		fmt.Println("Users command does not accept arguments!")
+		os.Exit(1)
+	}
+
+	users, err := s.Db.GetUsers(context.Background())
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	username := s.Config.CurrentUserName
+
+	for _, user := range users {
+		if username == user.Name {
+			fmt.Printf("* %s (current)\n", user.Name)
+		} else {
+			fmt.Printf("* %s\n", user.Name)
+		}
+	}
+	return nil
+}
+
 func handlerReset(s *state, cmd command) error {
 	if len(cmd.Arguments) != 0 {
 		fmt.Println("Reset does not accept arguments!")
