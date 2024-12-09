@@ -47,6 +47,42 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const getFeedFollowsForUser = `-- name: GetFeedFollowsForUser :many
+SELECT ff.id, u.name as user_name, f.name as feed_name FROM users as U
+  INNER JOIN feed_follows as ff ON ff.user_id = u.id
+  INNER JOIN feeds as f ON ff.feed_id = f.id
+  WHERE u.name = $1
+`
+
+type GetFeedFollowsForUserRow struct {
+	ID       uuid.UUID
+	UserName string
+	FeedName string
+}
+
+func (q *Queries) GetFeedFollowsForUser(ctx context.Context, name string) ([]GetFeedFollowsForUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFeedFollowsForUser, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFeedFollowsForUserRow
+	for rows.Next() {
+		var i GetFeedFollowsForUserRow
+		if err := rows.Scan(&i.ID, &i.UserName, &i.FeedName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id, created_at, updated_at, name FROM users WHERE name = $1 LIMIT 1
 `

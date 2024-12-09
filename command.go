@@ -114,22 +114,18 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Arguments) != 2 {
 		fmt.Println("addFeed expects two arguments!")
 		os.Exit(1)
 	}
 
-	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	now := time.Now()
 
 	feedParams := database.CreateFeedParams{
 		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: now,
+		UpdatedAt: now,
 		Name:      cmd.Arguments[0],
 		Url:       cmd.Arguments[1],
 		UserID:    user.ID,
@@ -137,6 +133,23 @@ func handlerAddFeed(s *state, cmd command) error {
 
 	feed, err := s.Db.CreateFeed(context.Background(), feedParams)
 	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	feedFollowParams := database.CreateFeedFollowParams{
+		ID : uuid.New(),
+		CreatedAt: now,
+		UpdatedAt: now,
+		UserID: user.ID,
+		FeedID: feed.ID,
+	}
+
+	_, err = s.Db.CreateFeedFollow(
+		context.Background(), feedFollowParams,
+	)
+	if err != nil {
+		fmt.Println("Something went wrong while trying follow the feed:")
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -162,6 +175,59 @@ func handlerFeeds(s *state, cmd command) error {
 		fmt.Printf("Feed: %s | URL: %s | User: %s\n",
 			feed.Name, feed.Url, feed.Name_2,
 		)
+	}
+
+	return nil
+}
+
+func handlerFollow(s *state, cmd command, user database.User) error {
+	if len(cmd.Arguments) != 1 {
+		fmt.Println("Follow expects exactly one argument!")
+		os.Exit(1)
+	}
+
+	feed, err := s.Db.GetFeedByUrl(context.Background(), cmd.Arguments[0])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	feedFollowParams := database.CreateFeedFollowParams{
+		ID: uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID: user.ID,
+		FeedID: feed.ID,
+	}
+
+	_, err = s.Db.CreateFeedFollow(
+		context.Background(), feedFollowParams,
+	)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("User <%s> now following feed <%s>", user.Name, feed.Name)
+	return nil
+}
+
+func handlerFollowing(s *state, cmd command) error {
+	if len(cmd.Arguments) != 0 {
+		fmt.Println("Following requires no argument!")
+		os.Exit(1)
+	}
+
+	followingFeeds, err := s.Db.GetFeedFollowsForUser(
+		context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		fmt.Println("Something went wrong grabbing Follow Feeds!")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for _, ff := range followingFeeds {
+		fmt.Printf("* %s\n", ff.FeedName)
 	}
 
 	return nil
