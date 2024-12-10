@@ -212,6 +212,27 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 	return nil
 }
 
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.Arguments) != 1 {
+		fmt.Println("Unfollow expects exactly one argument!")
+		os.Exit(1)
+	}
+
+	unfollowParams := database.DeleteFeedFollowParams{
+		Name: user.Name,
+		Url: cmd.Arguments[0],
+	}
+
+	err := s.Db.DeleteFeedFollow(context.Background(), unfollowParams)
+	if err != nil {
+		fmt.Println("Could not unfollow feed:")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	return nil
+}
+
 func handlerFollowing(s *state, cmd command) error {
 	if len(cmd.Arguments) != 0 {
 		fmt.Println("Following requires no argument!")
