@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/jake-abed/gatorcli/internal/database"
 	"html"
 	"io"
@@ -47,8 +49,26 @@ func scrapeFeeds(s *state) error {
 		return err
 	}
 
+	fmt.Printf("Adding posts from %s!\n", feed.Channel.Title)
 	for _, item := range feed.Channel.Item {
-		fmt.Printf("* %s\n", item.Title)
+		postParams := database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now(),
+			Title:       sql.NullString{String: item.Title, Valid: true},
+			Url:         item.Link,
+			Description: sql.NullString{String: item.Description, Valid: true},
+			PublishedAt: sql.NullString{String: item.PubDate, Valid: true},
+			FeedID:      nextFeed.ID,
+		}
+
+		err = s.Db.CreatePost(context.Background(), postParams)
+		if err != nil {
+			if err.Error() == "pq: duplicate key value violates unique constraint \"posts_url_key\"" {
+				continue
+			}
+			fmt.Println(err.Error())
+			continue
+		}
 	}
 
 	return nil

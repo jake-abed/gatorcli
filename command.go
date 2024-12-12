@@ -8,6 +8,7 @@ import (
 	"github.com/jake-abed/gatorcli/internal/database"
 	"os"
 	"time"
+	"strconv"
 )
 
 type command struct {
@@ -106,7 +107,7 @@ func handlerAgg(s *state, cmd command) error {
 		return err
 	}
 
-	fmt.Printf("Collecting feeds every %s", cmd.Arguments[0])
+	fmt.Printf("Collecting feeds every %s\n", cmd.Arguments[0])
 
 	ticker := time.NewTicker(timeBetweenReqs)
 	for ; ; <- ticker.C {
@@ -115,6 +116,39 @@ func handlerAgg(s *state, cmd command) error {
 
 	return nil
 }
+
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	postQty := 2
+	if len(cmd.Arguments) >= 1 {
+		postsQty, err := strconv.ParseInt(cmd.Arguments[0], 10, 64)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		postQty = int(postsQty)
+	}
+
+	postParams := database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit: int32(postQty),
+	}
+	posts, err := s.Db.GetPostsForUser(context.Background(), postParams)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Println(posts)
+
+	for _, post := range posts {
+		fmt.Printf("Title: %s\n", post.Title.String)
+		fmt.Printf("Description: %s\n", post.Description.String)
+		fmt.Printf("Link: %s\n", post.Url)
+		fmt.Printf("Published: %s\n", post.PublishedAt.String)
+	}
+	return nil
+}
+
 
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Arguments) != 2 {
