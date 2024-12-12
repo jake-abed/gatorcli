@@ -96,20 +96,22 @@ func handlerUsers(s *state, cmd command) error {
 }
 
 func handlerAgg(s *state, cmd command) error {
-	if len(cmd.Arguments) != 0 {
-		fmt.Println("Agg command expects no arguments!")
+	if len(cmd.Arguments) != 1 {
+		fmt.Println("Agg command expects one argument!")
 		os.Exit(1)
 	}
 
-	url := "https://www.wagslane.dev/index.xml"
-
-	feed, err := fetchFeed(context.Background(), url)
+	timeBetweenReqs, err := time.ParseDuration(cmd.Arguments[0])
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 
-	fmt.Println(*feed)
+	fmt.Printf("Collecting feeds every %s", cmd.Arguments[0])
+
+	ticker := time.NewTicker(timeBetweenReqs)
+	for ; ; <- ticker.C {
+		scrapeFeeds(s)
+	}
 
 	return nil
 }

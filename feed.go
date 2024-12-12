@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"encoding/xml"
+	"fmt"
+	"github.com/jake-abed/gatorcli/internal/database"
 	"html"
 	"io"
 	"net/http"
+	"time"
 )
 
 type RSSFeed struct {
@@ -22,6 +25,33 @@ type RSSItem struct {
 	Link        string `xml:"link"`
 	Description string `xml:"description"`
 	PubDate     string `xml:"pubDate"`
+}
+
+func scrapeFeeds(s *state) error {
+	nextFeed, err := s.Db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return err
+	}
+
+	markFetchedParams := database.MarkFeedFetchedParams{
+		ID:        nextFeed.ID,
+		UpdatedAt: time.Now(),
+	}
+
+	if err = s.Db.MarkFeedFetched(context.Background(), markFetchedParams); err != nil {
+		return err
+	}
+
+	feed, err := fetchFeed(context.Background(), nextFeed.Url)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range feed.Channel.Item {
+		fmt.Printf("* %s\n", item.Title)
+	}
+
+	return nil
 }
 
 func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
@@ -59,10 +89,10 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 		itemTitle := html.UnescapeString(item.Title)
 		itemDesc := html.UnescapeString(item.Description)
 		newItem := RSSItem{
-			Title: itemTitle,
+			Title:       itemTitle,
 			Description: itemDesc,
-			Link : item.Link,
-			PubDate: item.PubDate,
+			Link:        item.Link,
+			PubDate:     item.PubDate,
 		}
 
 		rssFeed.Channel.Item[i] = newItem
